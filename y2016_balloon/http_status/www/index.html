@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Spartan Balloon</title>
+
+<script type="text/javascript">
+var escapable =
+  /[\x00-\x1f\ud800-\udfff\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufff0-\uffff]/g;
+var ws;
+var intervalTime = 50;
+var safetyTimeout;
+var safetyIntervalTime = 10;
+var selected = 0;
+
+// Filter out junky JSON packets that will otherwise cause nasty decoding errors.
+function filterUnicode(quoted) {
+  escapable.lastIndex = 0;
+  if (!escapable.test(quoted)) return quoted;
+
+  return quoted.replace(escapable, function(a) {
+    return '';
+  });
+}
+
+// Change the current data index to plot on the graph.
+function changeSelected(select) {
+  selected = select;
+  document.getElementById("selected").innerHTML = "Selected: " + selected;
+}
+
+// Get a new JSON packet from the websocket on the robot.
+function refresh() {
+  ws.send(lastSampleID);
+  safetyTimeout = setTimeout(safetyRefresh, safetyIntervalTime);
+}
+
+function safetyRefresh(){
+  console.log("Safety timeout exceeded. Performing additional refresh...");
+  refresh();
+}
+
+window.onload = function() {
+  var dps = [];
+  var numDatas = 0;
+
+  $(function() {
+    ws = new WebSocket('ws://' + document.location.host + '/ws');
+    run = true;
+    xVal = 1;
+    lastSampleID = -1;
+
+    // Socket created & first opened.
+    ws.onopen = function() {
+      run = true;
+      refresh();
+    };
+
+    // Socket disconnected.
+    ws.onclose = function() {
+      console.log('onclose');
+      run = false;
+      $('#message').text('Lost connection.');
+    };
+
+    ws.onmessage = function(message) {
+      console.log(message);
+      clearTimeout(safetyTimeout);
+      message = message.data;
+      console.log(message);
+      if(message.charAt(0) == "*"){
+        message = message.substring(1);
+        var names = message.split(",");
+        for (var i = numDatas; i < names.length; i++) {
+          $('#dataTable').append('<tr onClick="changeSelected(' + i +
+            ')"><td>' + names[i] + '</td><td></td></tr>');
+          numDatas++;
+        }
+        lastSampleID = 0;
+      }else{
+        var samples = message.split("$");
+        for(var x = 0;x < samples.length;x++){
+          var info = samples[x].split("%");
+          lastSampleID = info[0];
+
+          if(!(typeof info[2] === "undefined")){
+            var values = info[2].split(",");
+            for(var y = 0;y < values.length;y++){
+              if(!(typeof info[1] === "undefined"
+                    || typeof values[y] === "undefined")){
+                $('#dataTable').find('tr').eq(y).find('td').eq(1)
+                  .text(values[y]);
+              }
+            }
+          }
+        }
+      }
+
+      if(run){
+        setTimeout(refresh, intervalTime);
+      }
+    };
+
+    // Socket error, most likely due to a server-side error.
+    ws.onerror = function(error) {
+      console.log('onerror ' + error);
+      run = false;
+    };
+  });
+}
+</script>
+<script type="text/javascript" src='/lib/jquery-1.4.4.js'></script>
+<script type="text/javascript" src='/lib/canvasjs.min.js'></script>
+<script type="text/javascript" src='/lib/reconnecting-websocket.min.js'></script>
+
+</head>
+<body style="width: 100%;margin-left: auto;margin-right:auto">
+
+<!-- Data -->
+<table id="dataTable" style="position: absolute; top: 0; background: #FFFFFF; left: 0; width: 200px; cell-spacing:0; cell-padding:0; text-align: left; z-index: 99999;">
+</table>
+
+<div style="width: 1000px;float: right">
+  <p id="message" style="color: #FF0000"></p>
+  <p id="data"></p>
+</div>
+
+<!-- Video -->
+<video controls="controls" autoplay="autoplay" style="background: #666666; width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index:1;">
+  <source src="live.m3u8" type="application/x-mpegURL" />
+</video>
+
+</body>
+</html>
