@@ -1,6 +1,11 @@
 # Introduction
 Code for a telemetry system used on a weather balloon for a high school engineering project. This project uses FRC971's 2015 code repository as an underlying backbone for the project's structure.
 
+## Building the code
+The currently supported operating system for building the code is amd64 Debian Jessie. It is likely to work on any x86\_64 GNU/Linux system, but that's not at all well-tested.
+
+We use [Bazel](http://bazel.io) to build the code. Bazel has [extensive](http://bazel.io/docs/build-ref.html) [docs](http://bazel.io/docs/build-encyclopedia.html) and does a nice job with fast, correct increment rebuilds.
+
 Steps to set up a computer to build the code:
   0. Set up the required APT repositories:
      Download
@@ -17,15 +22,6 @@ apt-get install python libpython-dev bazel ruby clang-format-3.5 clang-3.6 gfort
 Some useful Bazel commands:
   * Build and test everything (on the host system):
 ```console
-bazel test //... -- $(cat NO_BUILD_AMD64)
-bazel build --cpu=roborio //... -- $(cat NO_BUILD_ROBORIO)
-```
-    The NO_BUILD_{AMD64,ROBORIO} files contain lists of the targets which are intentionally not built for the various CPUs.
-  * Build the code for a specific robot:
-```console
-bazel build --cpu=roborio --compilation_mode=opt //y2015/...
-```
-  * Download code to a robot:
-```console
-bazel run --cpu=roborio --compilation_mode=opt //y2015:download roboRIO-971.local
+bazel test //...
+bazel build --cpu=raspi //...
 ```
