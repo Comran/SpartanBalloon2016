@@ -1,5 +1,12 @@
 package(default_visibility = ['//visibility:public'])
 
+py_library(
+  name = 'py_trapezoid_profile',
+  srcs = [
+    'trapezoid_profile.py',
+  ],
+)
+
 cc_library(
   name = 'run_command',
   srcs = [
@@ -212,4 +219,30 @@ cc_test(
     '//aos/testing:googletest',
     '//aos/testing:test_logging',
   ],
+)
+
+cc_library(
+  name = 'file',
+  hdrs = [
+    'file.h',
+  ],
+  srcs = [
+    'file.cc',
+  ],
+  deps = [
+    '//aos/common:scoped_fd',
+  ],
+)
+
+cc_test(
+  name = 'file_test',
+  srcs = [
+    'file_test.cc',
+  ],
+  deps = [
+    ':file',
+    '//aos/testing:googletest',
+    '//aos/testing:test_logging',
+  ],
+  size = 'small',
 )

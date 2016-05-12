@@ -25,7 +25,8 @@ ControlLoopTest::~ControlLoopTest() {
 }
 
 void ControlLoopTest::SendMessages(bool enabled) {
-  if (current_time_ - last_ds_time_ >= kDSPacketTime) {
+  if (current_time_ - last_ds_time_ >= kDSPacketTime ||
+      last_enabled_ != enabled) {
     last_ds_time_ = current_time_;
     auto new_state = ::aos::joystick_state.MakeMessage();
     new_state->fake = true;
@@ -35,6 +36,7 @@ void ControlLoopTest::SendMessages(bool enabled) {
     new_state->team_id = team_id_;
 
     new_state.Send();
+    last_enabled_ = enabled;
   }
 
   {
@@ -49,8 +51,8 @@ void ControlLoopTest::SendMessages(bool enabled) {
     new_state->voltage_3v3 = 3.3;
     new_state->voltage_5v = 5.0;
 
-    new_state->voltage_roborio_in = 12.4;
-    new_state->voltage_battery = 12.4;
+    new_state->voltage_roborio_in = battery_voltage_;
+    new_state->voltage_battery = battery_voltage_;
 
     new_state.Send();
   }
