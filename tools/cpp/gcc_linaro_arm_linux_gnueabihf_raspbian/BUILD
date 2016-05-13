@@ -73,15 +73,41 @@ filegroup(
 )
 
 filegroup(
+  name = 'clang',
+  srcs = [
+    'clang_bin/clang',
+  ],
+)
+
+filegroup(
+  name = 'clang-ld',
+  srcs = [
+    'clang_bin/ld',
+    ':ld',
+  ],
+)
+
+filegroup(
   name = 'tool-wrappers',
   srcs = [
     ':gcc',
     ':ar',
-    ':as',
     ':ld',
     ':nm',
     ':objcopy',
     ':objdump',
     ':strip',
+    ':as',
+    'clang_bin/as',
+    ':clang',
+    ':clang-ld',
   ],
+)
+
+filegroup(
+  name = 'clang-symlinks',
+  srcs = glob([
+    'clang_more_libs/**',
+    'clang_syroot/**',
+  ]),
 )

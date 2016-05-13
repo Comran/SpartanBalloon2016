@@ -37,9 +37,10 @@ filegroup(
   name = 'toolchain',
   srcs = [
     ':cc-compiler-k8',
+    ':cc-compiler-raspi',
     ':flags_compiler_inputs',
     '@gcc_linaro_arm_linux_gnueabihf_raspbian_repo//:compiler_components',
-    ':linaro_gcc_files',
+    ':linaro-gcc-files',
   ],
 )
 
@@ -72,10 +73,11 @@ cc_toolchain(
 )
 
 filegroup(
-  name = 'linaro_gcc_files',
+  name = 'raspi-gcc-files',
   srcs = [
-     '//tools/cpp/gcc_linaro_arm_linux_gnueabihf_raspbian:tool-wrappers',
-     '@gcc_linaro_arm_linux_gnueabihf_raspbian_repo//:compiler_pieces',
+    '//tools/cpp/gcc_linaro_arm_linux_gnueabihf_raspbian:clang-symlinks',
+    '//tools/cpp/gcc_linaro_arm_linux_gnueabihf_raspbian:tool-wrappers',
+    '@gcc_linaro_arm_linux_gnueabihf_raspbian_repo//:compiler_pieces',
   ],
 )
 
@@ -85,6 +87,8 @@ filegroup(
     '//tools/cpp/gcc_linaro_arm_linux_gnueabihf_raspbian:gcc',
     '//tools/cpp/gcc_linaro_arm_linux_gnueabihf_raspbian:ld',
     '//tools/cpp/gcc_linaro_arm_linux_gnueabihf_raspbian:ar',
+    '//tools/cpp/gcc_linaro_arm_linux_gnueabihf_raspbian:clang-ld',
+    '//tools/cpp/gcc_linaro_arm_linux_gnueabihf_raspbian:clang',
     '@gcc_linaro_arm_linux_gnueabihf_raspbian_repo//:compiler_pieces',
   ],
 )
@@ -94,13 +98,14 @@ filegroup(
   srcs = [
     '//tools/cpp/gcc_linaro_arm_linux_gnueabihf_raspbian:gcc',
     '//tools/cpp/gcc_linaro_arm_linux_gnueabihf_raspbian:ld',
+    '//tools/cpp/gcc_linaro_arm_linux_gnueabihf_raspbian:clang',
     '//tools/cpp/gcc_linaro_arm_linux_gnueabihf_raspbian:as',
   ],
 )
 
 cc_toolchain(
   name = 'cc-compiler-raspi',
-  all_files = ':linaro_gcc_files',
+  all_files = ':raspi-gcc-files',
   compiler_files = ':linaro_linux_compiler_files',
   cpu = 'raspi',
   dwp_files = ':empty',

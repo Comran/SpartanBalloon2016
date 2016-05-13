@@ -1,4 +1,0 @@
-#!/bin/bash --norc
-
-exec -a "$0" \
-  "/usr/bin/clang-3.6" "$@"

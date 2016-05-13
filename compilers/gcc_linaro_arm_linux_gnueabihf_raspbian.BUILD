@@ -80,7 +80,7 @@ cc_library(
 cc_library(
   name = 'libpthread',
   deps = [
-    '@//tools/cpp/linaro_linux_gcc:libpthread',
+    '@//tools/cpp/gcc_linaro_arm_linux_gnueabihf_raspbian:libpthread',
   ],
 )
 
