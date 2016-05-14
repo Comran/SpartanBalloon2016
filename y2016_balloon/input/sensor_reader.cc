@@ -22,15 +22,34 @@
 
 #define sleepms(ms) usleep((ms)*1000)
 
-#define I2CBus "/dev/i2c-1"
-float RAD_TO_DEG = 57.29578;
+#define RAD_TO_DEG = 57.29578
 #define M_PI 3.14159265358979323846
+
+#define I2CBus "/dev/i2c-1"
 
 namespace y2016_balloon {
 namespace input {
 namespace bmp180 {
+
+// BMP085 & BMP180 Specific code
+#define BMPx8x_I2CADDR 0x77
+#define BMPx8x_CtrlMeas 0xF4
+#define BMPx8x_TempConversion 0x2E
+#define BMPx8x_PresConversion0 0x34
+#define BMPx8x_Results 0xF6
+// require 4.5ms *1000/700 'turbo mode fix'= 6.4-Retry =4.4
+#define BMPx8x_minDelay 4
+// min delay for temp 4+2=6ms, max 4+2*20=44ms for pressure
+#define BMPx8x_RetryDelay 2
+
+// Many things in this file are simply hacked together from a variety of sources
+// online to read the sensors and convey their vvalues to the sensor queue.
+// TODO(comran): Neaten up this code and make styleguide fixes.
+
+const unsigned char BMPx8x_OverSampling = 3;
+
 // Returns a file id for the port/bus
-int i2c_Open(char *I2CBusName) {
+int i2c_open(char *I2CBusName) {
   int fd;
   // Open port for reading and writing
   if ((fd = open(I2CBusName, O_RDWR)) < 0) {
@@ -53,7 +72,7 @@ int i2c_Open(char *I2CBusName) {
 }
 
 // BMP085 & BMP180 Specific code
-int bmp_ReadInt(int fd, uint8_t *devValues, uint8_t startReg,
+int bmp_read_int(int fd, uint8_t *devValues, uint8_t startReg,
                 uint8_t bytesToRead) {
   int rc;
   struct i2c_rdwr_ioctl_data messagebuffer;
@@ -95,7 +114,7 @@ int bmp_ReadInt(int fd, uint8_t *devValues, uint8_t startReg,
   return 0;
 }
 
-int bmp_WriteCmd(int fd, uint8_t devAction) {
+int bmp_write_cmd(int fd, uint8_t devAction) {
   int rc;
   struct i2c_rdwr_ioctl_data messagebuffer;
   uint8_t datatosend[2];
@@ -134,10 +153,9 @@ int bmp_WriteCmd(int fd, uint8_t devAction) {
   return 0;
 }
 
-int bmp_Calibration(int fd) {
+int bmp_calibration(int fd) {
   uint8_t rValue[21];
-  // printf("Entering Calibration\n");
-  if (bmp_ReadInt(fd, rValue, 0xAA, 22) == 0) {
+  if (bmp_read_int(fd, rValue, 0xAA, 22) == 0) {
     bmp_ac1 = ((rValue[0] << 8) | rValue[1]);
     bmp_ac2 = ((rValue[2] << 8) | rValue[3]);
     bmp_ac3 = ((rValue[4] << 8) | rValue[5]);
@@ -156,14 +174,14 @@ int bmp_Calibration(int fd) {
   return -1;
 }
 
-int WaitForConversion(int fd) {
+int bmp_wait_for_conversion(int fd) {
   uint8_t rValues[3];
   int counter = 0;
 
   // Delay can now be reduced by checking that bit 5 of Ctrl_Meas(0xF4) == 0
   do {
     sleepms(BMPx8x_RetryDelay);
-    if (bmp_ReadInt(fd, rValues, BMPx8x_CtrlMeas, 1) != 0) return -1;
+    if (bmp_read_int(fd, rValues, BMPx8x_CtrlMeas, 1) != 0) return -1;
     counter++;
   } while (((rValues[0] & 0x20) != 0) && counter < 20);
   return 0;
@@ -171,13 +189,13 @@ int WaitForConversion(int fd) {
 
 // Calculate calibrated pressure
 // Value returned will be in hPa
-int bmp_GetPressure(int fd, double *Pres) {
+int bmp_get_pressure(int fd, double *Pres) {
   unsigned int up;
   uint8_t rValues[3];
 
   // Pressure conversion with oversampling 0x34+ BMPx8x_OverSampling 'bit
   // shifted'
-  if (bmp_WriteCmd(fd, (BMPx8x_PresConversion0 + (BMPx8x_OverSampling << 6))) !=
+  if (bmp_write_cmd(fd, (BMPx8x_PresConversion0 + (BMPx8x_OverSampling << 6))) !=
       0)
     return -1;
 
@@ -189,9 +207,9 @@ int bmp_GetPressure(int fd, double *Pres) {
 
   // Code is now 'turbo' overclock independent
   sleepms(BMPx8x_minDelay);
-  if (WaitForConversion(fd) != 0) return -1;
+  if (bmp_wait_for_conversion(fd) != 0) return -1;
 
-  if (bmp_ReadInt(fd, rValues, BMPx8x_Results, 3) != 0) return -1;
+  if (bmp_read_int(fd, rValues, BMPx8x_Results, 3) != 0) return -1;
   up = (((unsigned int)rValues[0] << 16) | ((unsigned int)rValues[1] << 8) |
         (unsigned int)rValues[2]) >>
        (8 - BMPx8x_OverSampling);
@@ -226,16 +244,16 @@ int bmp_GetPressure(int fd, double *Pres) {
 
 // Calculate calibrated temperature
 // Value returned will be in units of 0.1 deg C
-int bmp_GetTemperature(int fd, double *Temp) {
+int bmp_get_temperature(int fd, double *Temp) {
   unsigned int ut;
   uint8_t rValues[2];
 
-  if (bmp_WriteCmd(fd, BMPx8x_TempConversion) != 0) return -1;
+  if (bmp_write_cmd(fd, BMPx8x_TempConversion) != 0) return -1;
   // Code is now 'turbo' overclock independent
   sleepms(BMPx8x_minDelay);
-  if (WaitForConversion(fd) != 0) return -1;
+  if (bmp_wait_for_conversion(fd) != 0) return -1;
 
-  if (bmp_ReadInt(fd, rValues, BMPx8x_Results, 2) != 0) return -1;
+  if (bmp_read_int(fd, rValues, BMPx8x_Results, 2) != 0) return -1;
   ut = ((rValues[0] << 8) | rValues[1]);
 
   int x1, x2;
@@ -249,14 +267,15 @@ int bmp_GetTemperature(int fd, double *Temp) {
 }
 
 double bmp_altitude(double p) {
-  //return 145437.86 * (1 - pow((p / 1013.25), 0.190294496));  // return feet
-  return 44330*(1- pow((p/1013.25),0.190294496)); //return meters
+  // return 145437.86 * (1 - pow((p / 1013.25), 0.190294496));  // return feet
+  return 44330 * (1 - pow((p / 1013.25), 0.190294496));  // return meters
 }
 
 double bmp_qnh(double p, double StationAlt) {
-  //return p / pow((1 - (StationAlt / 145437.86)),
+  // return p / pow((1 - (StationAlt / 145437.86)),
   //               5.255);  // return hPa based on feet
-  return p / pow((1-(StationAlt/44330)),5.255) ; //return hPa based on meters
+  return p /
+         pow((1 - (StationAlt / 44330)), 5.255);  // return hPa based on meters
 }
 
 double ppl_DensityAlt(double PAlt, double Temp) {
@@ -459,21 +478,21 @@ int main(int argc, char **argv) {
 
   short ax, ay, az;
   int16_t cx, cy, cz;
-  //float AccYangle(0.0), AccXangle(0.0);
+  // float AccYangle(0.0), AccXangle(0.0);
 
   int32_t ms5803_temp, ms5803_pressure;
 
   HMC5883L hmc5883l;
 
   // double PAlt;
-  fd = ::y2016_balloon::input::bmp180::i2c_Open(I2CBus);
+  fd = ::y2016_balloon::input::bmp180::i2c_open(I2CBus);
 
-  if(init(fd_adxl)){
+  if (init(fd_adxl)) {
     printf("Could not init ADXL345\n");
   }
 
   printf("\nCalibration:%i (0= worked)\n",
-         ::y2016_balloon::input::bmp180::bmp_Calibration(fd));
+         ::y2016_balloon::input::bmp180::bmp_calibration(fd));
 
   hmc5883l.initialize();
 
@@ -482,11 +501,11 @@ int main(int argc, char **argv) {
   ::y2016_balloon::input::ms5803::ms5803_init(I2CBus, 0x76);
   while (true) {
     phased_loop.SleepUntilNext();
-    ::y2016_balloon::input::bmp180::bmp_GetTemperature(fd, &bmp180_temp);
-    ::y2016_balloon::input::bmp180::bmp_GetPressure(fd, &bmp180_pressure);
+    ::y2016_balloon::input::bmp180::bmp_get_temperature(fd, &bmp180_temp);
+    ::y2016_balloon::input::bmp180::bmp_get_pressure(fd, &bmp180_pressure);
     readADXL345(fd_adxl, ax, ay, az);
     hmc5883l.getHeading(&cx, &cy, &cz);
-    //TODO(comran): Check the following...
+    // TODO(comran): Check the following...
     /*
     AccXangle = (float)(atan2(ay, az) + M_PI) * RAD_TO_DEG;
     AccYangle = (float)(atan2(ax, az) + M_PI) * RAD_TO_DEG;
@@ -503,7 +522,8 @@ int main(int argc, char **argv) {
     ::y2016_balloon::sensors::sensors.MakeWithBuilder()
         .bmp180_temp(bmp180_temp)
         .bmp180_pressure(bmp180_pressure)
-        .bmp180_altitude(::y2016_balloon::input::bmp180::bmp_altitude(bmp180_pressure))
+        .bmp180_altitude(
+             ::y2016_balloon::input::bmp180::bmp_altitude(bmp180_pressure))
         .ax(ax)
         .ay(ay)
         .az(az)
