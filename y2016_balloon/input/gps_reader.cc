@@ -1,10 +1,7 @@
-#include <stdio.h>
-#include <stdint.h>
-#include <fcntl.h>
-#include <stdlib.h>
+#include <gps.h>
+
 #include "aos/linux_code/init.h"
 #include "y2016_balloon/input/gps.q.h"
-#include <gps.h>
 
 int main(int argc, char **argv) {
   ::aos::Init();
