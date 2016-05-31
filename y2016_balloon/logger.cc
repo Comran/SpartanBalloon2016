@@ -29,7 +29,9 @@ int main() {
 
   // Log file, in comma-separated value format to make it easy to spreadsheet
   // the data.
-  ::std::ofstream log_file("/media/exfat/log.csv", ::std::ios::app);
+  ::std::ofstream log_file_backup("/home/comran/log.csv", ::std::ios::app);
+  ::std::ofstream log_file("/media/logger/log.csv", ::std::ios::app);
+  log_file_backup << ::std::endl << "BEGIN NEW LOG" << ::std::endl;
   log_file << ::std::endl << "BEGIN NEW LOG" << ::std::endl;
 
   while (true) {
@@ -69,6 +71,7 @@ int main() {
     }
 
     // Write to file.
+    log_file_backup << new_log_data.str();
     log_file << new_log_data.str();
   }
 
