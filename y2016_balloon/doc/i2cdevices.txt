@@ -1,0 +1,5 @@
+1e compass
+48 temperature
+76 fancy barometer
+53 accelerometer
+77 bmp180

@@ -9,8 +9,23 @@ var escapable =
 var ws;
 var intervalTime = 50;
 var safetyTimeout;
-var safetyIntervalTime = 10;
+var safetyIntervalTime = 10000;
 var selected = 0;
+
+function round(value) {
+  value = +value;
+
+  if (isNaN(value))
+    return NaN;
+
+  // Shift
+  value = value.toString().split('e');
+  value = Math.round(+(value[0] + 'e' + (value[1] ? (+value[1] + 9) : 9)));
+
+  // Shift back
+  value = value.toString().split('e');
+  return (+(value[0] + 'e' + (value[1] ? (+value[1] - 9) : -9))).toFixed(9);
+}
 
 // Filter out junky JSON packets that will otherwise cause nasty decoding errors.
 function filterUnicode(quoted) {
@@ -39,7 +54,7 @@ function safetyRefresh(){
   refresh();
 }
 
-window.onload = function() {
+document.ready = function() {
   var dps = [];
   var numDatas = 0;
 
@@ -88,7 +103,7 @@ window.onload = function() {
               if(!(typeof info[1] === "undefined"
                     || typeof values[y] === "undefined")){
                 $('#dataTable').find('tr').eq(y).find('td').eq(1)
-                  .text(values[y]);
+                  .text(round(values[y]));
               }
             }
           }
@@ -107,27 +122,20 @@ window.onload = function() {
     };
   });
 }
+
 </script>
 <script type="text/javascript" src='/lib/jquery-1.4.4.js'></script>
-<script type="text/javascript" src='/lib/canvasjs.min.js'></script>
 <script type="text/javascript" src='/lib/reconnecting-websocket.min.js'></script>
 
 </head>
 <body style="width: 100%;margin-left: auto;margin-right:auto">
 
-<!-- Data -->
-<table id="dataTable" style="position: absolute; top: 0; background: #FFFFFF; left: 0; width: 200px; cell-spacing:0; cell-padding:0; text-align: left; z-index: 99999;">
-</table>
-
-<div style="width: 1000px;float: right">
-  <p id="message" style="color: #FF0000"></p>
-  <p id="data"></p>
-</div>
-
 <!-- Video -->
-<video controls="controls" autoplay="autoplay" style="background: #666666; width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index:1;">
-  <source src="live.m3u8" type="application/x-mpegURL" />
-</video>
+<img id="streamimage" style="width:595px;height:415px;position:absolute;top:0;left:300px;" src="http://127.0.0.1:8081/?action=stream" />
+
+<!-- Data -->
+<table id="dataTable" style="position: absolute; background-color:#000000; top: 0; left: 0; width: 300px; cell-spacing:0; cell-padding:0; text-align: right; z-index: 99999;color:#FFFFFF;font-size:18px">
+</table>
 
 </body>
 </html>

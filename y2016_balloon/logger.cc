@@ -24,15 +24,20 @@
 #include "y2016_balloon/input/sensors.q.h"
 #include "y2016_balloon/input/gps.q.h"
 
+// Whether to store a local copy of the log data on the SD card.
+//#define BACKUP_LOG
+
 int main() {
   aos::InitNRT();
 
   // Log file, in comma-separated value format to make it easy to spreadsheet
   // the data.
-  ::std::ofstream log_file_backup("/home/comran/log.csv", ::std::ios::app);
   ::std::ofstream log_file("/media/logger/log.csv", ::std::ios::app);
-  log_file_backup << ::std::endl << "BEGIN NEW LOG" << ::std::endl;
   log_file << ::std::endl << "BEGIN NEW LOG" << ::std::endl;
+#ifdef BACKUP_LOG
+  ::std::ofstream log_file_backup("/home/comran/log.csv", ::std::ios::app);
+  log_file_backup << ::std::endl << "BEGIN NEW LOG" << ::std::endl;
+#endif
 
   while (true) {
     ::aos::time::Time now = ::aos::time::Time::Now();
@@ -71,8 +76,10 @@ int main() {
     }
 
     // Write to file.
-    log_file_backup << new_log_data.str();
     log_file << new_log_data.str();
+#ifdef BACKUP_LOG
+    log_file_backup << new_log_data.str();
+#endif
   }
 
   aos::Cleanup();
